@@ -1,6 +1,6 @@
 ARG NODE_VERSION=23
 
-FROM node:${NODE_VERSION}-slim
+FROM node:${NODE_VERSION}-alpine
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -11,7 +11,7 @@ WORKDIR /ai-core
 
 COPY package.json .
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install && pnpm i -g @nestjs/cli
 
 COPY . .
 
