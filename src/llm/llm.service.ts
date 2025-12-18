@@ -11,6 +11,6 @@ export class LlmService {
       input: prompt,
     });
 
-    return response;
+    return response.output_text;
   }
 }
