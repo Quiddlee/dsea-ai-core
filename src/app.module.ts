@@ -3,9 +3,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LlmService } from './llm/llm.service';
 import { AgentModule } from './agent/agent.module';
+import { DrizzleModule } from './drizzle/drizzle.module';
 
 @Module({
-  imports: [AgentModule],
+  imports: [AgentModule, DrizzleModule],
   controllers: [AppController],
   providers: [AppService, LlmService],
 })
