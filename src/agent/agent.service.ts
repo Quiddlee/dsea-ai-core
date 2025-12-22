@@ -1,92 +1,65 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ChatAgentDto } from './dto/chat-agent.dto';
 import { LlmService } from '../llm/llm.service';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as sc from '../schema';
-import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { eq } from 'drizzle-orm';
-import {
-  ONBOARDING_MESSAGE,
-  ONBOARDING_SUCCESS,
-  ONBOARDING_VALIDATION_PROMPT,
-  USER_MESSAGE_PLACEHOLDER,
-} from './agent.constants';
-import { OnboardingValidationResponse } from './domain/agent.types';
+import { UsersRepository } from '../users/users.repository';
+import { OnboardingService } from '../onboarding/onboarding.service';
+import { ONBOARDING_STATUS } from '../onboarding/domain/onboarding.enums';
+import { MessagesRepository } from '../messages/messages.repository';
+import { GREETINGS_MESSAGE } from '../onboarding/domain/onboarding.constants';
+import { MESSAGE_ROLE } from '../messages/domain/messages.enums';
 
 @Injectable()
 export class AgentService {
   constructor(
-    @Inject(DrizzleAsyncProvider)
-    private db: NodePgDatabase<typeof sc>,
     private readonly llmService: LlmService,
+    private readonly onboardingService: OnboardingService,
+    private readonly usersRepository: UsersRepository,
+    private readonly messagesRepository: MessagesRepository,
   ) {}
 
   async handleQuery({ message, telegramId }: ChatAgentDto) {
-    // query user
-    const userQueryResult = await this.db
-      .select()
-      .from(sc.users)
-      .where(eq(sc.users.telegramId, telegramId));
-    const user = userQueryResult.at(0);
-
-    if (!user) {
-      // create user
-      await this.db.insert(sc.users).values({ telegramId });
-
-      return ONBOARDING_MESSAGE;
-    }
-
-    if (user?.onboardingStatus === 'onboarding') {
-      // validate onboarding
-      const onboardingData = await this.validateOnboardingData(message);
-
-      if (onboardingData.needsRetry) {
-        return onboardingData.retryMessage;
-      }
-
-      // save user data to db
-      await this.db
-        .update(sc.users)
-        .set({
-          fullName: onboardingData.fullName,
-          group: onboardingData.group,
-          activatedAt: new Date(),
-        })
-        .where(eq(sc.users.telegramId, telegramId));
-
-      return ONBOARDING_SUCCESS;
-    }
-
-    return this.llmService.generate(message);
-  }
-
-  private async validateOnboardingData(message: string) {
-    const validationResult = await this.llmService.generate(
-      ONBOARDING_VALIDATION_PROMPT.replace(USER_MESSAGE_PLACEHOLDER, message),
+    const user =
+      await this.usersRepository.findFirstOrCreateByTelegramId(telegramId);
+    const hasMessagesHistory = await this.messagesRepository.hasMessagesHistory(
+      user.id,
     );
 
-    return JSON.parse(
-      validationResult,
-    ) as unknown as OnboardingValidationResponse;
-  }
+    await this.messagesRepository.append({
+      userId: user.id,
+      content: message,
+      role: MESSAGE_ROLE.USER,
+    });
 
-  private async findOrCreateByTelegramId(telegramId: number) {
-    const result = await this.db
-      .select()
-      .from(sc.users)
-      .where(eq(sc.users.telegramId, telegramId));
-    const user = result.at(0);
-
-    if (user) {
-      return user;
+    if (!hasMessagesHistory) {
+      return this.sendGreeting(user.id);
     }
 
-    const createdUserResult = await this.db
-      .insert(sc.users)
-      .values({ telegramId })
-      .returning();
-    const createdUser = createdUserResult.at(0);
+    if (user.onboardingStatus === ONBOARDING_STATUS.ONBOARDING) {
+      return this.onboardingService.handleOnboardingFlow(user.id, message);
+    }
 
-    return createdUser;
+    return this.handleAgentReply(user.id, message);
+  }
+
+  private async sendGreeting(userId: string) {
+    await this.messagesRepository.append({
+      userId,
+      content: GREETINGS_MESSAGE,
+      role: MESSAGE_ROLE.SYSTEM,
+    });
+
+    return GREETINGS_MESSAGE;
+  }
+
+  private async handleAgentReply(userId: string, userMessage: string) {
+    const agentReply = await this.llmService.generate(userMessage);
+
+    await this.messagesRepository.append({
+      userId,
+      content: agentReply,
+      role: MESSAGE_ROLE.AGENT,
+    });
+
+    return agentReply;
   }
 }

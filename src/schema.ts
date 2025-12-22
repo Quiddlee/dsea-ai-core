@@ -12,18 +12,18 @@ export const userRoleEnum = pgEnum('user_role', [
   'student',
   'applicant',
   'admin',
-]);
+] as const);
 
 export const onboardingStatusEnum = pgEnum('onboarding_status', [
   'onboarding',
   'active',
-]);
+] as const);
 
 export const messageRoleEnum = pgEnum('message_role', [
   'user',
-  'assistant',
+  'agent',
   'system',
-]);
+] as const);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),

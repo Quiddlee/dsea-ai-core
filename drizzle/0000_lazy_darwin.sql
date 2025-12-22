@@ -1,4 +1,4 @@
-CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system');--> statement-breakpoint
+CREATE TYPE "public"."message_role" AS ENUM('user', 'agent', 'system');--> statement-breakpoint
 CREATE TYPE "public"."onboarding_status" AS ENUM('onboarding', 'active');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('student', 'applicant', 'admin');--> statement-breakpoint
 CREATE TABLE "messages" (
