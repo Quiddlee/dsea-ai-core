@@ -1,9 +1,11 @@
 import {
   bigint,
+  index,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { InferInsertModel, InferSelectModel } from 'drizzle-orm';
@@ -71,3 +73,35 @@ export const messages = pgTable('messages', {
 export type Message = InferSelectModel<typeof messages>;
 export type NewMessage = InferInsertModel<typeof messages>;
 export type MessageRole = (typeof messageRoleEnum.enumValues)[number];
+
+export const documents = pgTable(
+  'documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    sourceType: text('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    url: text('url'),
+    title: text('title'),
+
+    mimeType: text('mime_type'),
+    checksum: text('checksum').notNull(),
+    status: text('status').notNull().default('DISCOVERED'),
+
+    lastError: text('last_error'),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    parsedAt: timestamp('parsed_at', { withTimezone: true }),
+    embeddedAt: timestamp('embedded_at', { withTimezone: true }),
+  },
+  (t) => ({
+    sourceUq: uniqueIndex('documents_source_uq').on(t.sourceType, t.sourceId),
+    statusIdx: index('documents_status_idx').on(t.status),
+    updatedAtIdx: index('documents_updated_at_idx').on(t.updatedAt),
+  }),
+);

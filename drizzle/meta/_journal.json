@@ -8,6 +8,13 @@
       "when": 1766411077502,
       "tag": "0000_lazy_darwin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766574944363,
+      "tag": "0001_goofy_nova",
+      "breakpoints": true
     }
   ]
 }
