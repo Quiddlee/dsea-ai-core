@@ -10,6 +10,8 @@ import { MessagesModule } from './messages/messages.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { UsersRepository } from './users/users.repository';
 import { MessagesRepository } from './messages/messages.repository';
+import { DocumentsRepository } from './documents/documents.repository';
+import { DocumentsChunksRepository } from './document-chunks/documentsChunks.repository';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { MessagesRepository } from './messages/messages.repository';
     OnboardingService,
     UsersRepository,
     MessagesRepository,
+    DocumentsRepository,
+    DocumentsChunksRepository,
   ],
 })
 export class AppModule {}

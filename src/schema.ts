@@ -1,6 +1,8 @@
 import {
   bigint,
   index,
+  integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -87,6 +89,7 @@ export const documents = pgTable(
     mimeType: text('mime_type'),
     checksum: text('checksum').notNull(),
     status: text('status').notNull().default('DISCOVERED'),
+    rawPath: text('raw_path').notNull(),
 
     lastError: text('last_error'),
 
@@ -95,7 +98,8 @@ export const documents = pgTable(
       .defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .defaultNow()
+      .$onUpdate(() => new Date()),
     parsedAt: timestamp('parsed_at', { withTimezone: true }),
     embeddedAt: timestamp('embedded_at', { withTimezone: true }),
   },
@@ -103,5 +107,39 @@ export const documents = pgTable(
     sourceUq: uniqueIndex('documents_source_uq').on(t.sourceType, t.sourceId),
     statusIdx: index('documents_status_idx').on(t.status),
     updatedAtIdx: index('documents_updated_at_idx').on(t.updatedAt),
+  }),
+);
+
+export type Documents = InferSelectModel<typeof documents>;
+export type NewDocuments = InferInsertModel<typeof documents>;
+
+export const documentChunks = pgTable(
+  'document_chunks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+
+    chunkIndex: integer('chunk_index').notNull(),
+    content: text('content').notNull(),
+    contentHash: text('content_hash').notNull(),
+
+    pageStart: integer('page_start'),
+    pageEnd: integer('page_end'),
+
+    metadata: jsonb('metadata').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    docChunkUq: uniqueIndex('document_chunks_uq').on(
+      t.documentId,
+      t.chunkIndex,
+    ),
+    documentIdIdx: index('document_chunks_document_id_idx').on(t.documentId),
+    contentHashIdx: index('document_chunks_content_hash_idx').on(t.contentHash),
   }),
 );

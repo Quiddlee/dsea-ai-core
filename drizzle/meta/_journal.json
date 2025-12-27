@@ -15,6 +15,20 @@
       "when": 1766574944363,
       "tag": "0001_goofy_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766673042610,
+      "tag": "0002_stale_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1766844641010,
+      "tag": "0003_robust_leopardon",
+      "breakpoints": true
     }
   ]
 }
