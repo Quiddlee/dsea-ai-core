@@ -10,6 +10,8 @@ export const pgBossProvider = [
         connectionString: process.env.DATABASE_URL!,
       });
 
+      boss.on('error', console.error);
+
       await boss.start();
 
       process.on('SIGTERM', async () => boss.stop());

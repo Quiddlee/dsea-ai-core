@@ -14,6 +14,8 @@ export class ChunkingJobs {
   ) {}
 
   async register() {
+    await this.boss.createQueue(JOB_CHUNK_DOCUMENT);
+
     await this.boss.work(JOB_CHUNK_DOCUMENT, async ([job]) => {
       const { documentId } = job.data as { documentId: string };
       await this.chunkingService.chunkDocument(documentId);

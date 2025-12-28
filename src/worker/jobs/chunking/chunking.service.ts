@@ -25,11 +25,11 @@ export class ChunkingService {
     }
 
     const docPath = path.resolve(
-      path.join(process.env.ARTIFACTS_DIR!, doc.rawPath),
+      path.join('..', process.env.ARTIFACTS_DIR!, doc.rawPath),
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handleImageChunking(doc);
+      await this.handlePdfChunking(doc);
     }
 
     if (doc.mimeType === 'text/plain') {
