@@ -62,7 +62,7 @@ export class ChunkingService {
 
       const chunks = await this.textSplitter.splitText(content);
 
-      await this.documentsChunksRepository.appendChunks(
+      await this.documentsChunksRepository.rebuildChunks(
         documentId,
         chunks,
         DOCUMENT_TYPE.TEXT,

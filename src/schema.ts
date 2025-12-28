@@ -143,3 +143,6 @@ export const documentChunks = pgTable(
     contentHashIdx: index('document_chunks_content_hash_idx').on(t.contentHash),
   }),
 );
+
+export type DocumentChunks = InferSelectModel<typeof documentChunks>;
+export type NewDocumentChunks = InferInsertModel<typeof documentChunks>;
