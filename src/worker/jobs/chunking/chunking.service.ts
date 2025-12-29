@@ -7,6 +7,8 @@ import { TokenTextSplitter } from '@langchain/textsplitters';
 import { TEXT_SPLITTER_PROVIDER } from '../../providers/text-splitter/textSplitter.provider';
 import { DocumentsChunksRepository } from '../../../document-chunks/documentsChunks.repository';
 import { DOCUMENT_STATUS, DOCUMENT_TYPE } from '../../../common/constants';
+import { PageTableResult, PDFParse } from 'pdf-parse';
+import { LlmService } from '../../../llm/llm.service';
 
 @Injectable()
 export class ChunkingService {
@@ -15,6 +17,7 @@ export class ChunkingService {
     private readonly textSplitter: TokenTextSplitter,
     private readonly documentsRepository: DocumentsRepository,
     private readonly documentsChunksRepository: DocumentsChunksRepository,
+    private readonly llmService: LlmService,
   ) {}
 
   async chunkDocument(documentId: string) {
@@ -29,7 +32,7 @@ export class ChunkingService {
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handlePdfChunking(doc);
+      await this.handlePdfChunking(/*doc*/);
     }
 
     if (doc.mimeType === 'text/plain') {
@@ -51,7 +54,33 @@ export class ChunkingService {
     // TODO: queue embedding job
   }
 
-  private async handlePdfChunking(document: Documents) {}
+  async handlePdfChunking(/*path: string*/) {
+    const docPath = path.resolve(
+      path.join('..', process.env.ARTIFACTS_DIR!, 'raw/508d4b3bfc89178a.pdf'),
+    );
+
+    // const docPath = path.resolve(
+    //   path.join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
+    // );
+
+    const buffer = await fs.readFile(docPath);
+    const parser = new PDFParse({ data: buffer });
+    const res = await parser.getTable();
+
+    const isTableParsed = res.pages.some((page) => Boolean(page.tables.length));
+    let buff: string[] = [];
+
+    if (isTableParsed) {
+      buff = this.preparePdfTableForChunking(res.pages);
+    } else {
+      // this.llmService;
+      // ai fallback
+    }
+
+    console.log(buff);
+
+    // const allSplits = await this.textSplitter.splitDocuments(doc);
+  }
 
   private async handleTextChunking(documentId: string, content: string) {
     try {
@@ -87,5 +116,50 @@ export class ChunkingService {
     } catch (err) {
       console.error(err);
     }
+  }
+
+  private preparePdfTableForChunking(pages: PageTableResult[]) {
+    const buff: string[] = [];
+
+    const tableContentMap = pages
+      .at(0)
+      ?.tables?.at(0)
+      ?.at(0)
+      ?.map((cell) =>
+        cell.replaceAll('-\n', '').replaceAll('\n', ' ').toLowerCase(),
+      );
+
+    // remove tableContentMap
+    pages.at(0)?.tables?.at(0)?.shift();
+
+    pages.forEach((page) => {
+      page.tables.forEach((table) => {
+        table.forEach((row) => {
+          // ignore near empty rows
+          const notDataRow = row.filter(Boolean).length < 3;
+
+          if (notDataRow) {
+            return;
+          }
+
+          const contentRows = row
+            .map((val, i) => {
+              const key = tableContentMap?.[i];
+
+              if (val && key) {
+                return `${key}=${val}`;
+              }
+
+              return null;
+            })
+            .filter(Boolean);
+
+          const rowString = contentRows.join(' | ');
+          buff.push(rowString);
+        });
+      });
+    });
+
+    return buff;
   }
 }

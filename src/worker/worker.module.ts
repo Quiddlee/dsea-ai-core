@@ -7,6 +7,7 @@ import { PgBossModule } from './providers/pg-boss/pgBoss.module';
 import { TextSplitterModule } from './providers/text-splitter/textSplitter.module';
 import { DrizzleModule } from '../drizzle/drizzle.module';
 import { ChunkingJobs } from './jobs/chunking/chunking.jobs';
+import { LlmService } from '../llm/llm.service';
 
 @Module({
   imports: [PgBossModule, TextSplitterModule, DrizzleModule],
@@ -16,6 +17,7 @@ import { ChunkingJobs } from './jobs/chunking/chunking.jobs';
     ChunkingJobs,
     DocumentsRepository,
     DocumentsChunksRepository,
+    LlmService,
   ],
 })
 export class WorkerModule {}
