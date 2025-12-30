@@ -32,7 +32,7 @@ export class ChunkingService {
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handlePdfChunking(/*doc*/);
+      await this.handlePdfChunking(documentId, docPath);
     }
 
     if (doc.mimeType === 'text/plain') {
@@ -54,32 +54,38 @@ export class ChunkingService {
     // TODO: queue embedding job
   }
 
-  async handlePdfChunking(/*path: string*/) {
-    const docPath = path.resolve(
-      path.join('..', process.env.ARTIFACTS_DIR!, 'raw/508d4b3bfc89178a.pdf'),
-    );
-
-    // const docPath = path.resolve(
-    //   path.join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
-    // );
-
-    const buffer = await fs.readFile(docPath);
+  async handlePdfChunking(documentId: string, path: string) {
+    const buffer = await fs.readFile(path);
     const parser = new PDFParse({ data: buffer });
     const res = await parser.getTable();
 
-    const isTableParsed = res.pages.some((page) => Boolean(page.tables.length));
-    let buff: string[] = [];
+    const isTablesParsed = res.pages.some((page) =>
+      Boolean(page.tables.length),
+    );
+    let chunks: string[] = [];
 
-    if (isTableParsed) {
-      buff = this.preparePdfTableForChunking(res.pages);
+    if (isTablesParsed) {
+      chunks = this.preparePdfTablesForChunking(res.pages);
     } else {
-      // this.llmService;
       // ai fallback
+      // let chunks = await this.llmService.preparePdfTableForChunking();
     }
 
-    console.log(buff);
+    await this.documentsRepository.updateStatusById(
+      documentId,
+      DOCUMENT_STATUS.CHUNKING,
+    );
 
-    // const allSplits = await this.textSplitter.splitDocuments(doc);
+    await this.documentsChunksRepository.rebuildChunks(
+      documentId,
+      chunks,
+      DOCUMENT_TYPE.PDF,
+    );
+
+    await this.documentsRepository.updateStatusById(
+      documentId,
+      DOCUMENT_STATUS.CHUNKED,
+    );
   }
 
   private async handleTextChunking(documentId: string, content: string) {
@@ -118,7 +124,7 @@ export class ChunkingService {
     }
   }
 
-  private preparePdfTableForChunking(pages: PageTableResult[]) {
+  private preparePdfTablesForChunking(pages: PageTableResult[]) {
     const buff: string[] = [];
 
     const tableContentMap = pages
