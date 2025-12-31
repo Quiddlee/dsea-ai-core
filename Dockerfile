@@ -7,6 +7,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 RUN corepack enable
 
+RUN apk add --no-cache graphicsmagick imagemagick ghostscript
+
 WORKDIR /ai-core
 
 COPY package.json .

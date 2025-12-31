@@ -68,6 +68,32 @@ export class ChunkingService {
       chunks = this.preparePdfTablesForChunking(res.pages);
     } else {
       // ai fallback
+
+      const parsedImagesPath = join(
+        '..',
+        process.env.ARTIFACTS_DIR!,
+        'parsed-image',
+      );
+
+      await mkdir(parsedImagesPath, { recursive: true });
+
+      const options: Options = {
+        density: 200,
+        saveFilename: 'test',
+        savePath: parsedImagesPath,
+        format: 'jpeg',
+        width: 1700,
+        height: 2200,
+        preserveAspectRatio: true,
+        quality: 5,
+        compression: 'jpeg',
+      };
+
+      const ALL_PAGES = -1;
+      await fromPath(docPath, options).bulk(ALL_PAGES, {
+        responseType: 'image',
+      });
+
       // let chunks = await this.llmService.preparePdfTableForChunking();
     }
 
