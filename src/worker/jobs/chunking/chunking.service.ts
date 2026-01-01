@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DocumentsRepository } from '../../../documents/documents.repository';
-import path from 'node:path';
-import fs from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { mkdir, readFile } from 'node:fs/promises';
 import { Documents } from '../../../schema';
 import { TokenTextSplitter } from '@langchain/textsplitters';
 import { TEXT_SPLITTER_PROVIDER } from '../../providers/text-splitter/textSplitter.provider';
@@ -9,6 +9,8 @@ import { DocumentsChunksRepository } from '../../../document-chunks/documentsChu
 import { DOCUMENT_STATUS, DOCUMENT_TYPE } from '../../../common/constants';
 import { PageTableResult, PDFParse } from 'pdf-parse';
 import { LlmService } from '../../../llm/llm.service';
+import { fromPath } from 'pdf2pic';
+import { Options } from 'pdf2pic/dist/types/options';
 
 @Injectable()
 export class ChunkingService {
@@ -27,12 +29,12 @@ export class ChunkingService {
       return console.warn(`Could not find document with id ${documentId}`);
     }
 
-    const docPath = path.resolve(
-      path.join('..', process.env.ARTIFACTS_DIR!, doc.rawPath),
+    const docPath = resolve(
+      join('..', process.env.ARTIFACTS_DIR!, doc.rawPath),
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handlePdfChunking(documentId, docPath);
+      await this.handlePdfChunking(/*documentId, docPath*/);
     }
 
     if (doc.mimeType === 'text/plain') {
@@ -54,8 +56,20 @@ export class ChunkingService {
     // TODO: queue embedding job
   }
 
-  async handlePdfChunking(documentId: string, path: string) {
-    const buffer = await fs.readFile(path);
+  async handlePdfChunking(/*documentId: string, path: string*/) {
+    // const docPath = resolve(
+    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/508d4b3bfc89178a.pdf'),
+    // );
+    //
+    const docPath = resolve(
+      join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
+    );
+    // const docPath = resolve(
+    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/a6c1b6287d850b91.pdf'),
+    // );
+
+    // const buffer = await readFile(path);
+    const buffer = await readFile(docPath);
     const parser = new PDFParse({ data: buffer });
     const res = await parser.getTable();
 
@@ -79,13 +93,13 @@ export class ChunkingService {
 
       const options: Options = {
         density: 200,
-        saveFilename: 'test',
+        saveFilename: 'page',
         savePath: parsedImagesPath,
         format: 'jpeg',
         width: 1700,
         height: 2200,
         preserveAspectRatio: true,
-        quality: 5,
+        quality: 30,
         compression: 'jpeg',
       };
 
@@ -94,24 +108,35 @@ export class ChunkingService {
         responseType: 'image',
       });
 
-      // let chunks = await this.llmService.preparePdfTableForChunking();
+      const imagePath = resolve(
+        join('..', process.env.ARTIFACTS_DIR!, 'parsed-image', 'page.3.jpeg'),
+      );
+      const imageBuffer = await readFile(imagePath);
+
+      const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+      // let chunks = await this.llmService.preparePdfTableImagesForChunking([
+      //   base64Image,
+      // ]);
+
+      // await rm(parsedImagesPath, { recursive: true, force: true });
     }
 
-    await this.documentsRepository.updateStatusById(
-      documentId,
-      DOCUMENT_STATUS.CHUNKING,
-    );
-
-    await this.documentsChunksRepository.rebuildChunks(
-      documentId,
-      chunks,
-      DOCUMENT_TYPE.PDF,
-    );
-
-    await this.documentsRepository.updateStatusById(
-      documentId,
-      DOCUMENT_STATUS.CHUNKED,
-    );
+    // await this.documentsRepository.updateStatusById(
+    //   documentId,
+    //   DOCUMENT_STATUS.CHUNKING,
+    // );
+    //
+    // await this.documentsChunksRepository.rebuildChunks(
+    //   documentId,
+    //   chunks,
+    //   DOCUMENT_TYPE.PDF,
+    // );
+    //
+    // await this.documentsRepository.updateStatusById(
+    //   documentId,
+    //   DOCUMENT_STATUS.CHUNKED,
+    // );
   }
 
   private async handleTextChunking(documentId: string, content: string) {
@@ -142,7 +167,7 @@ export class ChunkingService {
 
   private async readFile(path: string) {
     try {
-      return await fs.readFile(path, {
+      return await readFile(path, {
         encoding: 'utf8',
       });
     } catch (err) {
