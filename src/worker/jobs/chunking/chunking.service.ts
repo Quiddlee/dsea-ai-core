@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DocumentsRepository } from '../../../documents/documents.repository';
 import { join, resolve } from 'node:path';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile } from 'node:fs/promises';
 import { Documents } from '../../../schema';
 import { TokenTextSplitter } from '@langchain/textsplitters';
 import { TEXT_SPLITTER_PROVIDER } from '../../providers/text-splitter/textSplitter.provider';
@@ -34,7 +34,7 @@ export class ChunkingService {
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handlePdfChunking(/*documentId, docPath*/);
+      await this.handlePdfChunking(documentId /* docPath*/);
     }
 
     if (doc.mimeType === 'text/plain') {
@@ -56,22 +56,25 @@ export class ChunkingService {
     // TODO: queue embedding job
   }
 
-  async handlePdfChunking(/*documentId: string, path: string*/) {
+  async handlePdfChunking(documentId: string /* path: string*/) {
     // const docPath = resolve(
     //   join('..', process.env.ARTIFACTS_DIR!, 'raw/508d4b3bfc89178a.pdf'),
     // );
     //
-    const docPath = resolve(
-      join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
-    );
     // const docPath = resolve(
-    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/a6c1b6287d850b91.pdf'),
+    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
     // );
+    const docPath = resolve(
+      join('..', process.env.ARTIFACTS_DIR!, 'raw/a6c1b6287d850b91.pdf'),
+    );
 
     // const buffer = await readFile(path);
     const buffer = await readFile(docPath);
     const parser = new PDFParse({ data: buffer });
     const res = await parser.getTable();
+
+    const pdfText = await parser.getText();
+    console.log(pdfText.text, 'pdf text ayo');
 
     const isTablesParsed = res.pages.some((page) =>
       Boolean(page.tables.length),
@@ -99,7 +102,7 @@ export class ChunkingService {
         width: 1700,
         height: 2200,
         preserveAspectRatio: true,
-        quality: 30,
+        quality: 100,
         compression: 'jpeg',
       };
 
@@ -108,35 +111,70 @@ export class ChunkingService {
         responseType: 'image',
       });
 
-      const imagePath = resolve(
-        join('..', process.env.ARTIFACTS_DIR!, 'parsed-image', 'page.3.jpeg'),
-      );
-      const imageBuffer = await readFile(imagePath);
+      const imageFileNames = await readdir(parsedImagesPath);
 
-      const base64Image = Buffer.from(imageBuffer).toString('base64');
+      const base64Images = [];
+      for await (const imageFileName of imageFileNames) {
+        const imagePath = resolve(join(parsedImagesPath, imageFileName));
+        const imageBuffer = await readFile(imagePath);
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        base64Images.push(base64Image);
+      }
 
-      // let chunks = await this.llmService.preparePdfTableImagesForChunking([
-      //   base64Image,
-      // ]);
+      console.log('start llm request');
+      // const llmRes = await this.llmService.preparePdfTableImagesForChunking(
+      //   pdfText.text,
+      // );
+      /*
+      const queue: Set<Promise<string>> = new Set();
+
+      for await (const base64Image of base64Images) {
+        const promise = this.llmService.preparePdfTableImagesForChunking([
+          base64Image,
+        ]);
+        queue.add(promise);
+      }
+
+      const res = await Promise.all(queue);
+      console.log('end llm request');
+
+      console.log(res, 'llm res');
+
+      console.log('start chunks array fill');
+
+ */
+      // console.log(llmRes);
+      // mockResponse.forEach((chunk) => {
+      //   const rows = chunk.split('\n').filter((row) => row.trim() !== '');
+      //
+      //   if (rows.length) {
+      //     chunks.push(...rows);
+      //   }
+      // });
 
       // await rm(parsedImagesPath, { recursive: true, force: true });
     }
+    console.log('start db write');
+    /*
+    await this.documentsRepository.updateStatusById(
+      documentId,
+      DOCUMENT_STATUS.CHUNKING,
+    );
 
-    // await this.documentsRepository.updateStatusById(
-    //   documentId,
-    //   DOCUMENT_STATUS.CHUNKING,
-    // );
-    //
-    // await this.documentsChunksRepository.rebuildChunks(
-    //   documentId,
-    //   chunks,
-    //   DOCUMENT_TYPE.PDF,
-    // );
-    //
-    // await this.documentsRepository.updateStatusById(
-    //   documentId,
-    //   DOCUMENT_STATUS.CHUNKED,
-    // );
+    await this.documentsChunksRepository.rebuildChunks(
+      documentId,
+      chunks,
+      DOCUMENT_TYPE.PDF,
+    );
+
+    await this.documentsRepository.updateStatusById(
+      documentId,
+      DOCUMENT_STATUS.CHUNKED,
+    );
+
+    console.log('end db write');
+
+ */
   }
 
   private async handleTextChunking(documentId: string, content: string) {
