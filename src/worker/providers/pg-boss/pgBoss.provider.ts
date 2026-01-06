@@ -1,13 +1,16 @@
 import { PgBoss } from 'pg-boss';
+import { AppConfig } from '../../../common/types/environment';
+import { appConfiguration } from '../../../common/config/app.config';
 
 export const PG_BOSS_PROVIDER = Symbol('PG_BOSS_PROVIDER');
 
 export const pgBossProvider = [
   {
     provide: PG_BOSS_PROVIDER,
-    useFactory: async () => {
+    inject: [appConfiguration.KEY],
+    useFactory: async (appConfig: AppConfig) => {
       const boss = new PgBoss({
-        connectionString: process.env.DATABASE_URL!,
+        connectionString: appConfig.database.url,
       });
 
       boss.on('error', console.error);

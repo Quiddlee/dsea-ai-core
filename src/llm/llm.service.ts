@@ -1,9 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { OpenAI } from 'openai';
+import type { AppConfig } from '../common/types/environment';
+import { appConfiguration } from '../common/config/app.config';
 
 @Injectable()
 export class LlmService {
   private readonly client = new OpenAI();
+
+  constructor(
+    @Inject(appConfiguration.KEY)
+    private readonly appConfig: AppConfig,
+  ) {}
 
   async generate(prompt: string) {
     const response = await this.client.responses.create({
@@ -107,8 +114,8 @@ FINAL RULES
 
   async generateEmbeddings(str: string[]) {
     return this.client.embeddings.create({
-      model: process.env.EMBEDDING_MODEL!,
-      dimensions: Number(process.env.EMBEDDING_DIMENSIONS),
+      model: this.appConfig.embedding.model,
+      dimensions: this.appConfig.embedding.dimensions,
       input: str,
       encoding_format: 'float',
     });

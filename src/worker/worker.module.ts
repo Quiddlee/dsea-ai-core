@@ -11,9 +11,19 @@ import { LlmService } from '../llm/llm.service';
 import { EmbeddingService } from './jobs/embedding/embedding.service';
 import { EmbeddingJobs } from './jobs/embedding/embedding.jobs';
 import { DocumentsChunkEmbeddingsRepository } from '../document-chunk-embeddings/documentsChunkEmbeddings.repository';
+import { ConfigModule } from '@nestjs/config';
+import { appConfiguration } from '../common/config/app.config';
 
 @Module({
-  imports: [PgBossModule, TextSplitterModule, DrizzleModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfiguration],
+    }),
+    PgBossModule,
+    TextSplitterModule,
+    DrizzleModule,
+  ],
   providers: [
     WorkerService,
     ChunkingService,

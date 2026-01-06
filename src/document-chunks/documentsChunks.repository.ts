@@ -5,10 +5,14 @@ import { DRIZZLE_ASYNC_PROVIDER } from '../drizzle/drizzle.provider';
 import type { DocumentTypes, Schema } from '../common/types/db';
 import { CHUNK_CONFIG } from '../common/constants';
 import { eq } from 'drizzle-orm';
+import { appConfiguration } from '../common/config/app.config';
+import type { AppConfig } from '../common/types/environment';
 
 @Injectable()
 export class DocumentsChunksRepository {
   constructor(
+    @Inject(appConfiguration.KEY)
+    private readonly appConfig: AppConfig,
     @Inject(DRIZZLE_ASYNC_PROVIDER)
     private readonly db: Schema,
   ) {}
@@ -32,7 +36,7 @@ export class DocumentsChunksRepository {
         chunkIndex: index,
         metadata: JSON.stringify({
           unit: 'tokens',
-          encoding: 'cl100k_base',
+          encoding: this.appConfig.chunking.encodingTokenizer,
           size: chunkConfig.size,
           overlap: chunkConfig.overlap,
         }),

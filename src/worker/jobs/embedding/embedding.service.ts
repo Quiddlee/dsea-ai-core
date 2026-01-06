@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DocumentsRepository } from '../../../documents/documents.repository';
 import { LlmService } from '../../../llm/llm.service';
 import { DocumentsChunksRepository } from '../../../document-chunks/documentsChunks.repository';
@@ -6,10 +6,14 @@ import { generateHash } from '../../../common/helpers/string';
 import { DocumentsChunkEmbeddingsRepository } from '../../../document-chunk-embeddings/documentsChunkEmbeddings.repository';
 import { DocumentChunkEmbedding, DocumentChunks } from '../../../schema';
 import { CreateEmbeddingResponse } from 'openai/resources';
+import { appConfiguration } from '../../../common/config/app.config';
+import type { AppConfig } from '../../../common/types/environment';
 
 @Injectable()
 export class EmbeddingService {
   constructor(
+    @Inject(appConfiguration.KEY)
+    private readonly appConfig: AppConfig,
     private readonly documentsRepository: DocumentsRepository,
     private readonly documentsChunksRepository: DocumentsChunksRepository,
     private readonly documentsChunkEmbeddingsRepository: DocumentsChunkEmbeddingsRepository,
@@ -56,15 +60,15 @@ export class EmbeddingService {
     return chunks.map((chunk, i) => {
       const embedding = embeddings.data.at(i)?.embedding as number[];
       const contentHash = generateHash(
-        process.env.EMBEDDING_MODEL! +
+        this.appConfig.embedding.model +
           chunk.contentHash +
-          process.env.EMBEDDING_DIMENSIONS!,
+          this.appConfig.embedding.dimensions,
       );
 
       return {
         chunkId: chunk.id,
         documentId: chunk.documentId,
-        model: process.env.EMBEDDING_MODEL!,
+        model: this.appConfig.embedding.model,
         embedding,
         contentHash,
       };
@@ -77,9 +81,9 @@ export class EmbeddingService {
   ) {
     return chunks.filter((chunk) => {
       const embeddedChunkContentNewHash = generateHash(
-        process.env.EMBEDDING_MODEL! +
+        this.appConfig.embedding.model +
           chunk.contentHash +
-          process.env.EMBEDDING_DIMENSIONS!,
+          this.appConfig.embedding.dimensions,
       );
       const embeddedChunk = embeddedChunks.find(
         (embeddedChunk) => embeddedChunk.chunkId === chunk.id,

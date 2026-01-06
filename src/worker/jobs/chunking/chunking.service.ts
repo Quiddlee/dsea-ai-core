@@ -11,10 +11,14 @@ import { PageTableResult, PDFParse } from 'pdf-parse';
 import { LlmService } from '../../../llm/llm.service';
 import { fromPath } from 'pdf2pic';
 import { Options } from 'pdf2pic/dist/types/options';
+import { appConfiguration } from '../../../common/config/app.config';
+import type { AppConfig } from '../../../common/types/environment';
 
 @Injectable()
 export class ChunkingService {
   constructor(
+    @Inject(appConfiguration.KEY)
+    private readonly appConfig: AppConfig,
     @Inject(TEXT_SPLITTER_PROVIDER)
     private readonly textSplitter: TokenTextSplitter,
     private readonly documentsRepository: DocumentsRepository,
@@ -30,7 +34,7 @@ export class ChunkingService {
     }
 
     const docPath = resolve(
-      join('..', process.env.ARTIFACTS_DIR!, doc.rawPath),
+      join('..', this.appConfig.artifactsDir, doc.rawPath),
     );
 
     if (doc.mimeType === 'application/pdf') {
@@ -58,14 +62,14 @@ export class ChunkingService {
 
   async handlePdfChunking(documentId: string /* path: string*/) {
     // const docPath = resolve(
-    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/508d4b3bfc89178a.pdf'),
+    //   join('..', this.appConfig.artifactsDir, 'raw/508d4b3bfc89178a.pdf'),
     // );
     //
     // const docPath = resolve(
-    //   join('..', process.env.ARTIFACTS_DIR!, 'raw/e99667332b394b2b.pdf'),
+    //   join('..', this.appConfig.artifactsDir, 'raw/e99667332b394b2b.pdf'),
     // );
     const docPath = resolve(
-      join('..', process.env.ARTIFACTS_DIR!, 'raw/a6c1b6287d850b91.pdf'),
+      join('..', this.appConfig.artifactsDir, 'raw/a6c1b6287d850b91.pdf'),
     );
 
     // const buffer = await readFile(path);
@@ -88,7 +92,7 @@ export class ChunkingService {
 
       const parsedImagesPath = join(
         '..',
-        process.env.ARTIFACTS_DIR!,
+        this.appConfig.artifactsDir,
         'parsed-image',
       );
 

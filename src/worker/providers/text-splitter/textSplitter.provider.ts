@@ -1,15 +1,18 @@
 import { TokenTextSplitter } from '@langchain/textsplitters';
+import { appConfiguration } from '../../../common/config/app.config';
+import { AppConfig } from '../../../common/types/environment';
 
 export const TEXT_SPLITTER_PROVIDER = Symbol('TEXT_SPLITTER_PROVIDER');
 
 export const textSplitterProvider = [
   {
     provide: TEXT_SPLITTER_PROVIDER,
-    useFactory: () => {
+    inject: [appConfiguration.KEY],
+    useFactory: (appConfig: AppConfig) => {
       return new TokenTextSplitter({
-        encodingName: 'cl100k_base',
-        chunkSize: process.env.CHUNK_SIZE_TEXT as unknown as number,
-        chunkOverlap: process.env.CHUNK_OVERLAP_TEXT as unknown as number,
+        encodingName: appConfig.chunking.encodingTokenizer,
+        chunkSize: appConfig.chunking.text.size,
+        chunkOverlap: appConfig.chunking.text.overlap,
       });
     },
   },

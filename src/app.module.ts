@@ -13,9 +13,17 @@ import { MessagesRepository } from './messages/messages.repository';
 import { DocumentsRepository } from './documents/documents.repository';
 import { DocumentsChunksRepository } from './document-chunks/documentsChunks.repository';
 import { DocumentsChunkEmbeddingsRepository } from './document-chunk-embeddings/documentsChunkEmbeddings.repository';
+import { ConfigModule } from '@nestjs/config';
+import { appConfiguration } from './common/config/app.config';
+import { APP_GUARD } from '@nestjs/core';
+import { AiCoreInternalAuthGuard } from './common/guards/ai-core-internal-auth/ai-core-internal-auth.guard';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfiguration],
+    }),
     AgentModule,
     DrizzleModule,
     UsersModule,
@@ -24,6 +32,10 @@ import { DocumentsChunkEmbeddingsRepository } from './document-chunk-embeddings/
   ],
   controllers: [AppController],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AiCoreInternalAuthGuard,
+    },
     AppService,
     LlmService,
     OnboardingService,

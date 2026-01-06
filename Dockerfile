@@ -17,4 +17,4 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install && pnpm i -g @nes
 
 COPY . .
 
-CMD ["pnpm", "start:dev"]
+CMD ["pnpm", "start:dev", "--", "--env-file", ".env.docker"]
