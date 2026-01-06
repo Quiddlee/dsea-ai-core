@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
 } from 'drizzle-orm/pg-core';
 import { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 
@@ -146,3 +147,52 @@ export const documentChunks = pgTable(
 
 export type DocumentChunks = InferSelectModel<typeof documentChunks>;
 export type NewDocumentChunks = InferInsertModel<typeof documentChunks>;
+
+export const documentChunkEmbeddings = pgTable(
+  'document_chunk_embeddings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    chunkId: uuid('chunk_id')
+      .notNull()
+      .references(() => documentChunks.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+
+    model: text('model').notNull(),
+    embedding: vector('embedding', {
+      dimensions: Number(process.env.EMBEDDING_DIMENSIONS),
+    }).notNull(),
+
+    contentHash: text('content_hash').notNull(),
+
+    metadata: jsonb('metadata').notNull().default({}),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    uq: uniqueIndex('chunk_embeddings_uq').on(
+      t.chunkId,
+      t.model,
+      t.contentHash,
+    ),
+
+    chunkIdIdx: index('chunk_embeddings_chunk_id_idx').on(t.chunkId),
+    modelIdx: index('chunk_embeddings_model_idx').on(t.model),
+
+    embeddingHnswIdx: index('chunk_embeddings_embedding_hnsw_idx').using(
+      'hnsw',
+      t.embedding.op('vector_cosine_ops'),
+    ),
+  }),
+);
+
+export type DocumentChunkEmbedding = InferSelectModel<
+  typeof documentChunkEmbeddings
+>;
+export type NewDocumentChunkEmbedding = InferInsertModel<
+  typeof documentChunkEmbeddings
+>;

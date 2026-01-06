@@ -12,6 +12,7 @@ import { UsersRepository } from './users/users.repository';
 import { MessagesRepository } from './messages/messages.repository';
 import { DocumentsRepository } from './documents/documents.repository';
 import { DocumentsChunksRepository } from './document-chunks/documentsChunks.repository';
+import { DocumentsChunkEmbeddingsRepository } from './document-chunk-embeddings/documentsChunkEmbeddings.repository';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { DocumentsChunksRepository } from './document-chunks/documentsChunks.rep
     MessagesRepository,
     DocumentsRepository,
     DocumentsChunksRepository,
+    DocumentsChunkEmbeddingsRepository,
   ],
 })
 export class AppModule {}

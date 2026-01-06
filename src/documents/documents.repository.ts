@@ -34,4 +34,11 @@ export class DocumentsRepository {
       lastError: message,
     });
   }
+
+  async setEmbedded(id: string) {
+    return this.updateDocumentById(id, {
+      status: DOCUMENT_STATUS.EMBEDDED,
+      embeddedAt: new Date(),
+    });
+  }
 }

@@ -104,4 +104,13 @@ FINAL RULES
 
     return response.output_text;
   }
+
+  async generateEmbeddings(str: string[]) {
+    return this.client.embeddings.create({
+      model: process.env.EMBEDDING_MODEL!,
+      dimensions: Number(process.env.EMBEDDING_DIMENSIONS),
+      input: str,
+      encoding_format: 'float',
+    });
+  }
 }

@@ -8,6 +8,9 @@ import { TextSplitterModule } from './providers/text-splitter/textSplitter.modul
 import { DrizzleModule } from '../drizzle/drizzle.module';
 import { ChunkingJobs } from './jobs/chunking/chunking.jobs';
 import { LlmService } from '../llm/llm.service';
+import { EmbeddingService } from './jobs/embedding/embedding.service';
+import { EmbeddingJobs } from './jobs/embedding/embedding.jobs';
+import { DocumentsChunkEmbeddingsRepository } from '../document-chunk-embeddings/documentsChunkEmbeddings.repository';
 
 @Module({
   imports: [PgBossModule, TextSplitterModule, DrizzleModule],
@@ -18,6 +21,9 @@ import { LlmService } from '../llm/llm.service';
     DocumentsRepository,
     DocumentsChunksRepository,
     LlmService,
+    EmbeddingService,
+    EmbeddingJobs,
+    DocumentsChunkEmbeddingsRepository,
   ],
 })
 export class WorkerModule {}

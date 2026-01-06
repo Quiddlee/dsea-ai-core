@@ -42,6 +42,12 @@ export class DocumentsChunksRepository {
     return this.db.insert(documentChunks).values(buf);
   }
 
+  async getChunksByDocumentId(id: string) {
+    return this.db.query.documentChunks.findMany({
+      where: eq(documentChunks.documentId, id),
+    });
+  }
+
   private async deleteDocumentChunks(documentId: string) {
     return this.db
       .delete(documentChunks)
