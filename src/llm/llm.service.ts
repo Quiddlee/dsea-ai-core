@@ -16,6 +16,19 @@ export class LlmService {
     const response = await this.client.responses.create({
       model: 'gpt-5-nano',
       input: prompt,
+      tools: [
+        {
+          type: 'mcp',
+          server_label: 'dsea-mcp-server',
+          server_description:
+            'Internal DSEA MCP server exposing document search and scheduling tools.',
+          server_url: 'http://localhost:3000/mcp',
+          require_approval: 'never',
+          headers: {
+            'x-ai-core-token': this.appConfig.aiCoreInternalToken as string,
+          },
+        },
+      ],
     });
 
     return response.output_text;
@@ -112,7 +125,7 @@ FINAL RULES
     return response.output_text;
   }
 
-  async generateEmbeddings(str: string[]) {
+  async generateEmbeddings(str: string | string[]) {
     return this.client.embeddings.create({
       model: this.appConfig.embedding.model,
       dimensions: this.appConfig.embedding.dimensions,

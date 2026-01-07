@@ -1,8 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE_ASYNC_PROVIDER } from '../drizzle/drizzle.provider';
 import type { Schema } from '../common/types/db';
-import { documentChunkEmbeddings, NewDocumentChunkEmbedding } from '../schema';
-import { eq, inArray } from 'drizzle-orm';
+import {
+  documentChunkEmbeddings,
+  documentChunks,
+  NewDocumentChunkEmbedding,
+} from '../schema';
+import { cosineDistance, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 @Injectable()
 export class DocumentsChunkEmbeddingsRepository {
@@ -21,6 +25,27 @@ export class DocumentsChunkEmbeddingsRepository {
     return this.db.query.documentChunkEmbeddings.findMany({
       where: eq(documentChunkEmbeddings.documentId, id),
     });
+  }
+
+  async findSimilarChunks(
+    queryEmbedding: number[],
+    threshold: number = 0.3,
+    limit: number = 10,
+  ) {
+    const similarity = sql<number>`1 - (${cosineDistance(documentChunkEmbeddings.embedding, queryEmbedding)})`;
+
+    const similarGuides = await this.db
+      .select({ content: documentChunks.content, similarity })
+      .from(documentChunkEmbeddings)
+      .where(gt(similarity, threshold))
+      .innerJoin(
+        documentChunks,
+        eq(documentChunkEmbeddings.chunkId, documentChunks.id),
+      )
+      .orderBy(desc(similarity))
+      .limit(limit);
+
+    return similarGuides;
   }
 
   private async deleteByChunkIds(ids: string[]) {

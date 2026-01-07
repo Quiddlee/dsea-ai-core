@@ -17,6 +17,10 @@ import { ConfigModule } from '@nestjs/config';
 import { appConfiguration } from './common/config/app.config';
 import { APP_GUARD } from '@nestjs/core';
 import { AiCoreInternalAuthGuard } from './common/guards/ai-core-internal-auth/ai-core-internal-auth.guard';
+import { McpModule } from '@rekog/mcp-nest';
+import { DocumentsModule } from './documents/documents.module';
+import { DocumentsService } from './documents/documents.service';
+import { DocumentsTool } from './documents/documents.tool';
 
 @Module({
   imports: [
@@ -24,11 +28,16 @@ import { AiCoreInternalAuthGuard } from './common/guards/ai-core-internal-auth/a
       isGlobal: true,
       load: [appConfiguration],
     }),
+    McpModule.forRoot({
+      name: 'dsea-mcp-server',
+      version: '1.0.0',
+    }),
     AgentModule,
     DrizzleModule,
     UsersModule,
     MessagesModule,
     OnboardingModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -44,6 +53,8 @@ import { AiCoreInternalAuthGuard } from './common/guards/ai-core-internal-auth/a
     DocumentsRepository,
     DocumentsChunksRepository,
     DocumentsChunkEmbeddingsRepository,
+    DocumentsService,
+    DocumentsTool,
   ],
 })
 export class AppModule {}
