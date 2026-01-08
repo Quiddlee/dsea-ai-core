@@ -10,8 +10,6 @@ export class DocumentsService {
   ) {}
 
   async getDocument(query: string) {
-    console.log('agent query = ', query);
-
     const embeddingResponse = await this.llmService.generateEmbeddings(query);
     const queryEmbedding = embeddingResponse.data?.at(0)?.embedding;
 
