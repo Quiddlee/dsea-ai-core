@@ -78,7 +78,6 @@ export class ChunkingService {
     const res = await parser.getTable();
 
     const pdfText = await parser.getText();
-    console.log(pdfText.text, 'pdf text ayo');
 
     const isTablesParsed = res.pages.some((page) =>
       Boolean(page.tables.length),
