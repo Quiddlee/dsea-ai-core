@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DocumentsRepository } from '../../../documents/documents.repository';
 import { join, resolve } from 'node:path';
-import { mkdir, readdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { Documents } from '../../../schema';
 import { TokenTextSplitter } from '@langchain/textsplitters';
 import { TEXT_SPLITTER_PROVIDER } from '../../providers/text-splitter/textSplitter.provider';
@@ -9,10 +9,11 @@ import { DocumentsChunksRepository } from '../../../document-chunks/documentsChu
 import { DOCUMENT_STATUS, DOCUMENT_TYPE } from '../../../common/constants';
 import { PageTableResult, PDFParse } from 'pdf-parse';
 import { LlmService } from '../../../llm/llm.service';
-import { fromPath } from 'pdf2pic';
-import { Options } from 'pdf2pic/dist/types/options';
 import { appConfiguration } from '../../../common/config/app.config';
 import type { AppConfig } from '../../../common/types/environment';
+import { PG_BOSS_PROVIDER } from '../../providers/pg-boss/pgBoss.provider';
+import { PgBoss } from 'pg-boss';
+import { JOB_EMBED_DOCUMENT } from '../embedding/embedding.jobs';
 
 @Injectable()
 export class ChunkingService {
@@ -21,6 +22,8 @@ export class ChunkingService {
     private readonly appConfig: AppConfig,
     @Inject(TEXT_SPLITTER_PROVIDER)
     private readonly textSplitter: TokenTextSplitter,
+    @Inject(PG_BOSS_PROVIDER)
+    private readonly boss: PgBoss,
     private readonly documentsRepository: DocumentsRepository,
     private readonly documentsChunksRepository: DocumentsChunksRepository,
     private readonly llmService: LlmService,
@@ -38,7 +41,7 @@ export class ChunkingService {
     );
 
     if (doc.mimeType === 'application/pdf') {
-      await this.handlePdfChunking(documentId /* docPath*/);
+      await this.handlePdfChunking(documentId, docPath);
     }
 
     if (doc.mimeType === 'text/plain') {
@@ -55,12 +58,16 @@ export class ChunkingService {
 
     if (doc.mimeType?.startsWith('image')) {
       await this.handleImageChunking(doc);
+      return console.log('Skipping image chunking');
     }
 
     // TODO: queue embedding job
+
+    const id = await this.boss.send(JOB_EMBED_DOCUMENT, { documentId });
+    console.log(`created job ${id} in queue ${JOB_EMBED_DOCUMENT}`);
   }
 
-  async handlePdfChunking(documentId: string /* path: string*/) {
+  async handlePdfChunking(documentId: string, path: string) {
     // const docPath = resolve(
     //   join('..', this.appConfig.artifactsDir, 'raw/508d4b3bfc89178a.pdf'),
     // );
@@ -68,12 +75,12 @@ export class ChunkingService {
     // const docPath = resolve(
     //   join('..', this.appConfig.artifactsDir, 'raw/e99667332b394b2b.pdf'),
     // );
-    const docPath = resolve(
-      join('..', this.appConfig.artifactsDir, 'raw/a6c1b6287d850b91.pdf'),
-    );
+    // const docPath = resolve(
+    //   join('..', this.appConfig.artifactsDir, 'raw/a6c1b6287d850b91.pdf'),
+    // );
 
-    // const buffer = await readFile(path);
-    const buffer = await readFile(docPath);
+    // const buffer = await readFile(docPath);
+    const buffer = await readFile(path);
     const parser = new PDFParse({ data: buffer });
     const res = await parser.getTable();
 
@@ -89,76 +96,79 @@ export class ChunkingService {
     } else {
       // ai fallback
 
-      const parsedImagesPath = join(
-        '..',
-        this.appConfig.artifactsDir,
-        'parsed-image',
-      );
+      // const parsedImagesPath = join(
+      //   '..',
+      //   this.appConfig.artifactsDir,
+      //   'parsed-image',
+      // );
 
-      await mkdir(parsedImagesPath, { recursive: true });
+      // await mkdir(parsedImagesPath, { recursive: true });
 
-      const options: Options = {
-        density: 200,
-        saveFilename: 'page',
-        savePath: parsedImagesPath,
-        format: 'jpeg',
-        width: 1700,
-        height: 2200,
-        preserveAspectRatio: true,
-        quality: 100,
-        compression: 'jpeg',
-      };
+      // const options: Options = {
+      //   density: 200,
+      //   saveFilename: 'page',
+      //   savePath: parsedImagesPath,
+      //   format: 'jpeg',
+      //   width: 1700,
+      //   height: 2200,
+      //   preserveAspectRatio: true,
+      //   quality: 100,
+      //   compression: 'jpeg',
+      // };
 
-      const ALL_PAGES = -1;
-      await fromPath(docPath, options).bulk(ALL_PAGES, {
-        responseType: 'image',
-      });
+      // const ALL_PAGES = -1;
+      // await fromPath(docPath, options).bulk(ALL_PAGES, {
+      //   responseType: 'image',
+      // });
 
-      const imageFileNames = await readdir(parsedImagesPath);
+      // const imageFileNames = await readdir(parsedImagesPath);
 
-      const base64Images = [];
-      for await (const imageFileName of imageFileNames) {
-        const imagePath = resolve(join(parsedImagesPath, imageFileName));
-        const imageBuffer = await readFile(imagePath);
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
-        base64Images.push(base64Image);
-      }
+      // const base64Images = [];
+      // for await (const imageFileName of imageFileNames) {
+      //   const imagePath = resolve(join(parsedImagesPath, imageFileName));
+      //   const imageBuffer = await readFile(imagePath);
+      //   const base64Image = Buffer.from(imageBuffer).toString('base64');
+      //   base64Images.push(base64Image);
+      // }
 
       console.log('start llm request');
-      // const llmRes = await this.llmService.preparePdfTableImagesForChunking(
-      //   pdfText.text,
-      // );
-      /*
-      const queue: Set<Promise<string>> = new Set();
 
-      for await (const base64Image of base64Images) {
-        const promise = this.llmService.preparePdfTableImagesForChunking([
-          base64Image,
-        ]);
-        queue.add(promise);
+      if (!pdfText.text) {
+        return console.warn('Missing the pdf text!');
       }
 
-      const res = await Promise.all(queue);
+      const llmRes = await this.llmService.preparePdfTableRawTextForChunking(
+        pdfText.text,
+      );
+      // const queue: Set<Promise<string>> = new Set();
+
+      // for await (const base64Image of base64Images) {
+      //   const promise = this.llmService.preparePdfTableImagesForChunking([
+      //     base64Image,
+      //   ]);
+      //   queue.add(promise);
+      // }
+
+      // const res = await Promise.all(queue);
       console.log('end llm request');
 
       console.log(res, 'llm res');
 
       console.log('start chunks array fill');
 
- */
-      // console.log(llmRes);
-      // mockResponse.forEach((chunk) => {
-      //   const rows = chunk.split('\n').filter((row) => row.trim() !== '');
-      //
-      //   if (rows.length) {
-      //     chunks.push(...rows);
-      //   }
-      // });
+      console.log(llmRes);
+      llmRes.split('\n').forEach((chunk) => {
+        const rows = chunk.split('\n').filter((row) => row.trim() !== '');
+
+        if (rows.length) {
+          chunks.push(...rows);
+        }
+      });
 
       // await rm(parsedImagesPath, { recursive: true, force: true });
     }
+
     console.log('start db write');
-    /*
     await this.documentsRepository.updateStatusById(
       documentId,
       DOCUMENT_STATUS.CHUNKING,
@@ -176,8 +186,6 @@ export class ChunkingService {
     );
 
     console.log('end db write');
-
- */
   }
 
   private async handleTextChunking(documentId: string, content: string) {
