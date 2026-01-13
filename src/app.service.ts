@@ -6,10 +6,9 @@ export class AppService {
   constructor(private readonly llmService: LlmService) {}
 
   testLlmService() {
-    const response = this.llmService.generate(
-      'Write a one-sentence bedtime story about a unicorn.',
-    );
-
-    return response;
+    // const response = this.llmService.generate(
+    //   'Write a one-sentence bedtime story about a unicorn.',
+    // );
+    // return response;
   }
 }

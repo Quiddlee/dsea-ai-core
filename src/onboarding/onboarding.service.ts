@@ -5,8 +5,6 @@ import {
   MISSING_RETRY_MESSAGE,
   ONBOARDING_FAILURE_MESSAGE,
   ONBOARDING_SUCCESS,
-  ONBOARDING_VALIDATION_PROMPT,
-  USER_MESSAGE_PLACEHOLDER,
 } from './domain/onboarding.constants';
 import { UsersRepository } from '../users/users.repository';
 import { safeParseJSON } from '../common/helpers/json';
@@ -40,9 +38,8 @@ export class OnboardingService {
   }
 
   private async validateOnboardingData(message: string) {
-    const validationResult = await this.llmService.generate(
-      ONBOARDING_VALIDATION_PROMPT.replace(USER_MESSAGE_PLACEHOLDER, message),
-    );
+    const validationResult =
+      await this.llmService.validateOnboardingData(message);
 
     return safeParseJSON<OnboardingValidationResponse>(validationResult);
   }

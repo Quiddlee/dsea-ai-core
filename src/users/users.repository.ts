@@ -31,4 +31,10 @@ export class UsersRepository {
   async updateUserById(id: string, data: Partial<User>) {
     return this.db.update(users).set(data).where(eq(users.id, id));
   }
+
+  async findById(id: string) {
+    return this.db.query.users.findFirst({
+      where: eq(users.id, id),
+    });
+  }
 }

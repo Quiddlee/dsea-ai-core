@@ -24,4 +24,11 @@ export class MessagesRepository {
   async append(data: NewMessage) {
     return (await this.db.insert(messages).values(data).returning()).at(0)!;
   }
+
+  async getLastMessagesByUserId(id: string, limit = 20) {
+    return this.db.query.messages.findMany({
+      where: eq(messages.userId, id),
+      limit,
+    });
+  }
 }

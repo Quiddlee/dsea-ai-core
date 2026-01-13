@@ -52,7 +52,24 @@ export class AgentService {
   }
 
   private async handleAgentReply(userId: string, userMessage: string) {
-    const agentReply = await this.llmService.generate(userMessage);
+    const [userData, lastMessages] = await Promise.all([
+      // TODO: cache user data
+      this.usersRepository.findById(userId),
+      this.messagesRepository.getLastMessagesByUserId(userId),
+    ]);
+
+    if (!userData) {
+      // TODO: change to logger service
+      return console.error(
+        '[handleAgentReply]: Aborting, unable to find user data',
+      );
+    }
+
+    const agentReply = await this.llmService.generate(
+      userData,
+      userMessage,
+      lastMessages,
+    );
 
     await this.messagesRepository.append({
       userId,
