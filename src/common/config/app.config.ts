@@ -29,4 +29,7 @@ export const appConfiguration = registerAs('app', () => ({
     model: process.env.EMBEDDING_MODEL as string,
     dimensions: Number(process.env.EMBEDDING_DIMENSIONS),
   },
+  llamaCloud: {
+    apiKey: process.env.LLAMA_CLOUD_API_KEY,
+  },
 }));
