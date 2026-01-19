@@ -13,6 +13,8 @@ import { EmbeddingJobs } from './jobs/embedding/embedding.jobs';
 import { DocumentsChunkEmbeddingsRepository } from '../document-chunk-embeddings/documentsChunkEmbeddings.repository';
 import { ConfigModule } from '@nestjs/config';
 import { appConfiguration } from '../common/config/app.config';
+import { VectorStoreIngestService } from './jobs/vector-store-ingest/vector-store-ingest.service';
+import { VectorStoreIngestJobs } from './jobs/vector-store-ingest/vector-store-ingest.jobs';
 
 @Module({
   imports: [
