@@ -12,6 +12,8 @@ import {
   USER_MESSAGE_PLACEHOLDER,
 } from '../onboarding/domain/onboarding.constants';
 import { MESSAGE_ROLE } from '../messages/domain/messages.enums';
+import { createReadStream } from 'node:fs';
+import { basename } from 'node:path/posix';
 
 const messageHistoryRoleDictionary = {
   [MESSAGE_ROLE.SYSTEM]: 'system',
@@ -22,6 +24,7 @@ const messageHistoryRoleDictionary = {
 @Injectable()
 export class LlmService {
   private readonly client: OpenAI;
+  private vectorStore?: OpenAI.VectorStore;
 
   constructor(
     @Inject(appConfiguration.KEY)
@@ -41,6 +44,7 @@ export class LlmService {
           content: message.content,
         }) as const,
     );
+    const vectorStoreId = (await this.getOrCreateVectorStore()).id;
 
     const response = await this.client.responses.create({
       model: 'gpt-5-nano',
@@ -64,17 +68,23 @@ export class LlmService {
           content: prompt,
         },
       ],
+      // tools: [
+      //   {
+      //     type: 'mcp',
+      //     server_label: 'dsea-mcp-server',
+      //     server_description:
+      //       'Internal DSEA MCP server exposing document search and scheduling tools.',
+      //     server_url: 'https://unrepressed-guttiform-quinn.ngrok-free.dev/mcp',
+      //     require_approval: 'never',
+      //     headers: {
+      //       'x-ai-core-token': this.appConfig.aiCoreInternalToken as string,
+      //     },
+      //   },
+      // ],
       tools: [
         {
-          type: 'mcp',
-          server_label: 'dsea-mcp-server',
-          server_description:
-            'Internal DSEA MCP server exposing document search and scheduling tools.',
-          server_url: 'https://unrepressed-guttiform-quinn.ngrok-free.dev/mcp',
-          require_approval: 'never',
-          headers: {
-            'x-ai-core-token': this.appConfig.aiCoreInternalToken as string,
-          },
+          type: 'file_search',
+          vector_store_ids: [vectorStoreId],
         },
       ],
     });
@@ -124,5 +134,49 @@ export class LlmService {
     });
 
     return response.output_text;
+  }
+
+  async uploadFileToVectorStore(filePath: string) {
+    void this.deDuplicateVectorStoreFile(filePath);
+
+    const vectorStore = await this.getOrCreateVectorStore();
+    const fileContent = createReadStream(filePath);
+
+    const file = await this.client.files.create({
+      file: fileContent,
+      purpose: 'assistants',
+    });
+
+    await this.client.vectorStores.files.create(vectorStore.id, {
+      file_id: file.id,
+    });
+  }
+
+  async getOrCreateVectorStore() {
+    if (this.vectorStore) {
+      return this.vectorStore;
+    }
+
+    const vectorStores = await this.client.vectorStores.list();
+    this.vectorStore = vectorStores.data.at(0);
+
+    if (!this.vectorStore) {
+      this.vectorStore = await this.client.vectorStores.create({
+        name: this.appConfig.knowledgeBaseVectorStoreName,
+      });
+    }
+
+    return this.vectorStore;
+  }
+
+  private async deDuplicateVectorStoreFile(filePath: string) {
+    const storeFileList = await this.client.files.list();
+    const fileName = basename(filePath);
+
+    for await (const file of storeFileList) {
+      if (file.filename === fileName) {
+        this.client.files.delete(file.id);
+      }
+    }
   }
 }

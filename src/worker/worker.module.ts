@@ -34,6 +34,8 @@ import { appConfiguration } from '../common/config/app.config';
     EmbeddingService,
     EmbeddingJobs,
     DocumentsChunkEmbeddingsRepository,
+    VectorStoreIngestJobs,
+    VectorStoreIngestService,
   ],
 })
 export class WorkerModule {}

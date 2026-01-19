@@ -25,6 +25,7 @@ export const appConfiguration = registerAs('app', () => ({
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
   },
+  knowledgeBaseVectorStoreName: process.env.KNOWLEDGE_BASE_VECTOR_STORE_NAME,
   embedding: {
     model: process.env.EMBEDDING_MODEL as string,
     dimensions: Number(process.env.EMBEDDING_DIMENSIONS),
