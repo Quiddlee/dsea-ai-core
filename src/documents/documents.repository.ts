@@ -18,6 +18,12 @@ export class DocumentsRepository {
     });
   }
 
+  async getDocumentByTitle(title: string) {
+    return this.db.query.documents.findFirst({
+      where: eq(documents.title, title),
+    });
+  }
+
   async updateDocumentById(id: string, data: Partial<Documents>) {
     return this.db.update(documents).set(data).where(eq(documents.id, id));
   }

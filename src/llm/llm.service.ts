@@ -68,23 +68,21 @@ export class LlmService {
           content: prompt,
         },
       ],
-      // tools: [
-      //   {
-      //     type: 'mcp',
-      //     server_label: 'dsea-mcp-server',
-      //     server_description:
-      //       'Internal DSEA MCP server exposing document search and scheduling tools.',
-      //     server_url: 'https://unrepressed-guttiform-quinn.ngrok-free.dev/mcp',
-      //     require_approval: 'never',
-      //     headers: {
-      //       'x-ai-core-token': this.appConfig.aiCoreInternalToken as string,
-      //     },
-      //   },
-      // ],
       tools: [
         {
           type: 'file_search',
           vector_store_ids: [vectorStoreId],
+        },
+        {
+          type: 'mcp',
+          server_label: 'dsea-mcp-server',
+          server_description:
+            'Internal DSEA MCP server exposing document tools.',
+          server_url: 'https://unrepressed-guttiform-quinn.ngrok-free.dev/mcp',
+          require_approval: 'never',
+          headers: {
+            'x-ai-core-token': this.appConfig.aiCoreInternalToken as string,
+          },
         },
       ],
     });

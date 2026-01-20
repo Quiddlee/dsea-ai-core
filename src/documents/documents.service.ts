@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { LlmService } from '../llm/llm.service';
 import { DocumentsChunkEmbeddingsRepository } from '../document-chunk-embeddings/documentsChunkEmbeddings.repository';
+import { DocumentsRepository } from './documents.repository';
 
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly documentsChunkEmbeddingsRepository: DocumentsChunkEmbeddingsRepository,
+    private readonly documentsRepository: DocumentsRepository,
     private readonly llmService: LlmService,
   ) {}
 
@@ -22,5 +24,9 @@ export class DocumentsService {
     return this.documentsChunkEmbeddingsRepository.findSimilarChunks(
       queryEmbedding,
     );
+  }
+
+  async getDocumentByTitle(title: string) {
+    return this.documentsRepository.getDocumentByTitle(title);
   }
 }
