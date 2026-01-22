@@ -21,6 +21,7 @@ import { McpModule } from '@rekog/mcp-nest';
 import { DocumentsModule } from './documents/documents.module';
 import { DocumentsService } from './documents/documents.service';
 import { DocumentsTool } from './documents/documents.tool';
+import { GradebookModule } from './gradebook/gradebook.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DocumentsTool } from './documents/documents.tool';
     MessagesModule,
     OnboardingModule,
     DocumentsModule,
+    GradebookModule,
   ],
   controllers: [AppController],
   providers: [

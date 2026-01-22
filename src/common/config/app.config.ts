@@ -33,4 +33,10 @@ export const appConfiguration = registerAs('app', () => ({
   llamaCloud: {
     apiKey: process.env.LLAMA_CLOUD_API_KEY,
   },
+  googleCloud: {
+    apiKey: process.env.GOOGLE_CLOUD_API_KEY as string,
+  },
+  gradebook: {
+    spreadsheetId: process.env.GRADEBOOK_SPREADSHEET_ID as string,
+  },
 }));
