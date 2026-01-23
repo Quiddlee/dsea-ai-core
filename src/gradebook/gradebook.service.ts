@@ -5,6 +5,7 @@ import {
   GoogleSpreadsheetWorksheet,
 } from 'google-spreadsheet';
 import {
+  CellCoords,
   DisciplineContentMap,
   DisciplineResultMap,
 } from './domain/gradebook.types';
@@ -17,7 +18,7 @@ export class GradebookService {
    * On the 2nd row placed headers with titles describing the main content.
    * @private
    */
-  private readonly disciplineContentMapActualContentStartRow = 2;
+  private readonly disciplineContentMapActualContentStartRow = 1;
 
   /**
    * This value is used to check for discipline missing fields to stop the parsing.
@@ -29,12 +30,12 @@ export class GradebookService {
    * All discipline cells columns are hardcoded, assuming that the layout won't change anytime soon.
    * @private
    */
-  private readonly groupCodeCol = 'A';
-  private readonly disciplineNameCol = 'B';
-  private readonly academicSemesterCol = 'C';
-  private readonly assessmentTypeCol = 'D';
-  private readonly responsibleDepartmentCol = 'E';
-  private readonly moodleLinkCol = 'F';
+  private readonly groupCodeCol = 0;
+  private readonly disciplineNameCol = 1;
+  private readonly academicSemesterCol = 2;
+  private readonly assessmentTypeCol = 3;
+  private readonly responsibleDepartmentCol = 4;
+  private readonly moodleLinkCol = 5;
 
   private readonly disciplineContentMapColList = [
     this.groupCodeCol,
@@ -43,7 +44,7 @@ export class GradebookService {
     this.assessmentTypeCol,
     this.responsibleDepartmentCol,
     this.moodleLinkCol,
-  ];
+  ] as const;
 
   constructor(
     @Inject(GOOGLE_SHEETS_GRADEBOOK_PROVIDER)
@@ -56,6 +57,33 @@ export class GradebookService {
     );
   }
 
+  async getStudyFundingTypeFromSheetByStudentsLastName(
+    sheetTitle: string,
+    lastName: string,
+  ) {
+    const sheet = await this.findSheetByName(
+      this.googleSheetsGradebookDoc,
+      sheetTitle,
+    );
+
+    if (!sheet) {
+      return null;
+    }
+
+    const studentsLastNameCell = this.findCellByContent(sheet, lastName);
+
+    if (!studentsLastNameCell) {
+      return null;
+    }
+
+    const studyType = this.getStudyFundingTypeByStudentsLastNameCellAddress(
+      sheet,
+      [studentsLastNameCell.rowIndex, studentsLastNameCell.columnIndex],
+    );
+
+    return studyType;
+  }
+
   async getAllDisciplineGradesFromSheetByStudentLastName(
     sheetTitle: string,
     lastName: string,
@@ -66,25 +94,20 @@ export class GradebookService {
     );
 
     if (!sheet) {
-      console.warn(`No sheet found for: ${sheetTitle}`);
       return new Set();
     }
 
-    const studentsLastNameA1Address = this.findA1AddressByContent(
-      sheet,
-      lastName,
-    );
+    const studentsLastNameCell = this.findCellByContent(sheet, lastName);
 
-    if (!studentsLastNameA1Address) {
-      console.warn(`No a1Address found for: ${lastName}`);
+    if (!studentsLastNameCell) {
       return new Set();
     }
 
     const disciplineInfoContentMap = this.initDisciplineInfoContentMap(sheet);
     const allDisciplineData =
-      this.getAllDisciplineDataByStudentsLastnameA1Address(
+      this.getAllDisciplineDataByStudentsLastNameCellCoords(
         sheet,
-        studentsLastNameA1Address,
+        [studentsLastNameCell.rowIndex, studentsLastNameCell.columnIndex],
         disciplineInfoContentMap,
       );
 
@@ -95,6 +118,10 @@ export class GradebookService {
     const sheetsByTitle = doc.sheetsByTitle;
     const sheet = sheetsByTitle[query];
 
+    if (!sheet) {
+      console.warn(`No sheet found for: ${query}`);
+    }
+
     await sheet.loadCells();
 
     console.log(`cells loaded for sheet ${query}: `, sheet.cellStats);
@@ -102,12 +129,19 @@ export class GradebookService {
     return sheet;
   }
 
-  private findA1AddressByContent(
+  private findCellByContent(
     sheet: GoogleSpreadsheetWorksheet,
     query: string,
+    {
+      initialRow = 0,
+      initialColumn = 0,
+    }: {
+      initialRow?: number;
+      initialColumn?: number;
+    } = {},
   ) {
-    for (let row = 0; row < sheet.rowCount; row++) {
-      for (let col = 0; col < sheet.columnCount; col++) {
+    for (let row = initialRow; row < sheet.rowCount; row++) {
+      for (let col = initialColumn; col < sheet.columnCount; col++) {
         const cell = sheet.getCell(row, col);
         const hasValue = cell.value !== undefined && cell.value !== null;
         const isQueryMatched =
@@ -115,29 +149,59 @@ export class GradebookService {
 
         if (hasValue && isQueryMatched) {
           console.log(cell.a1Address, cell.value);
-          return cell.a1Address;
+          return cell;
         }
       }
     }
 
     console.warn(`Unable to find Cell by query - ${query}`);
+
+    return null;
   }
 
-  private getAllDisciplineDataByStudentsLastnameA1Address(
+  private getStudyFundingTypeByStudentsLastNameCellAddress(
     sheet: GoogleSpreadsheetWorksheet,
-    a1Address: string,
+    targetCellAddress: CellCoords,
+  ) {
+    const [targetCellRow, targetCellCol] = targetCellAddress;
+
+    const studyFundingTypeLabelCell = this.findCellByContent(
+      sheet,
+      // TODO: move to constant
+      'Форма  фінансування навчання  студентів (бюджет/контракт)',
+      {
+        initialRow: targetCellRow,
+      },
+    );
+
+    if (!studyFundingTypeLabelCell) {
+      console.warn('Unable to find study funding type');
+      return null;
+    }
+
+    const studyFundingTypeContentCell = sheet.getCell(
+      studyFundingTypeLabelCell.rowIndex,
+      targetCellCol,
+    );
+
+    return studyFundingTypeContentCell.value;
+  }
+
+  private getAllDisciplineDataByStudentsLastNameCellCoords(
+    sheet: GoogleSpreadsheetWorksheet,
+    targetCellCoords: CellCoords,
     contentMap: DisciplineContentMap[],
   ) {
-    const targetCellRow = Number(a1Address.slice(1));
-    const targetCellCol = a1Address.slice(0, 1);
-    const contentStartRowRelativeToTargetCell = targetCellRow + 1;
+    const [targetCellRowIndex, targetCellColIndex] = targetCellCoords;
+    const contentStartRowIndexRelativeToTargetCell = targetCellRowIndex + 1;
     const allDisciplineDataList: Set<DisciplineResultMap> = new Set();
 
-    let currRow = contentStartRowRelativeToTargetCell;
+    let currRowIndex = contentStartRowIndexRelativeToTargetCell;
     while (true) {
       const currDisciplineData: DisciplineResultMap = new Map();
-      const currDisciplineGradeCell = sheet.getCellByA1(
-        `${targetCellCol}${currRow}`,
+      const currDisciplineGradeCell = sheet.getCell(
+        currRowIndex,
+        targetCellColIndex,
       );
 
       currDisciplineData.set(
@@ -149,8 +213,8 @@ export class GradebookService {
         this.hasAcademicDebt(currDisciplineGradeCell),
       );
 
-      contentMap.forEach(({ column, label }) => {
-        const content = sheet.getCellByA1(`${column}${currRow}`);
+      contentMap.forEach(({ columnIndex, label }) => {
+        const content = sheet.getCell(currRowIndex, columnIndex);
         const value = content.value?.toString().trim();
 
         currDisciplineData.set(label, value);
@@ -165,7 +229,7 @@ export class GradebookService {
 
       allDisciplineDataList.add(currDisciplineData);
 
-      currRow++;
+      currRowIndex++;
     }
 
     return allDisciplineDataList;
@@ -174,14 +238,15 @@ export class GradebookService {
   private initDisciplineInfoContentMap(
     sheet: GoogleSpreadsheetWorksheet,
   ): DisciplineContentMap[] {
-    return this.disciplineContentMapColList.map((column) => {
-      const groupCodeLabel = sheet.getCellByA1(
-        `${column}${this.disciplineContentMapActualContentStartRow}`,
+    return this.disciplineContentMapColList.map((columnIndex) => {
+      const disciplineContentLabel = sheet.getCell(
+        this.disciplineContentMapActualContentStartRow,
+        columnIndex,
       );
 
       return {
-        label: groupCodeLabel.value?.toString().trim(),
-        column,
+        label: disciplineContentLabel.value?.toString().trim(),
+        columnIndex,
       };
     });
   }
@@ -201,6 +266,7 @@ export class GradebookService {
     const disciplineMissingFields = [...disciplineData.values()].filter(
       (value) => !value,
     );
+
     return disciplineMissingFields.length >= this.missingFieldsThreshold;
   }
 }

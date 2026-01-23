@@ -1,6 +1,6 @@
 export type DisciplineContentMap = {
   label?: string;
-  column: string;
+  columnIndex: number;
 };
 
 export type DisciplineResult = {
@@ -12,3 +12,5 @@ export type DisciplineResultMap = Map<
   DisciplineResult['label'],
   DisciplineResult['value']
 >;
+
+export type CellCoords = readonly [row: number, col: number];
