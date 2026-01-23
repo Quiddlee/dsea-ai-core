@@ -10,7 +10,11 @@ import {
   DisciplineResultMap,
 } from './domain/gradebook.types';
 import { GOOGLE_SHEETS_GRADEBOOK_PROVIDER } from './providers/googleSheetsGradebookProvider';
-import { GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS } from './domain/gradebook.constants';
+import {
+  GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS,
+  STUDENT_STATUS_CELL_LABEL,
+  STUDY_FUNDING_TYPE_CELL_LABEL,
+} from './domain/gradebook.constants';
 
 @Injectable()
 export class GradebookService {
@@ -55,6 +59,33 @@ export class GradebookService {
     return this.googleSheetsGradebookDoc.sheetsByIndex.map(
       (sheet) => sheet.title,
     );
+  }
+
+  async getStudentStatusFromSheetByLastName(
+    sheetTitle: string,
+    lastName: string,
+  ) {
+    const sheet = await this.findSheetByName(
+      this.googleSheetsGradebookDoc,
+      sheetTitle,
+    );
+
+    if (!sheet) {
+      return null;
+    }
+
+    const studentsLastNameCell = this.findCellByContent(sheet, lastName);
+
+    if (!studentsLastNameCell) {
+      return null;
+    }
+
+    const studyType = this.getStudentStatusByStudentsLastNameCellAddress(
+      sheet,
+      [studentsLastNameCell.rowIndex, studentsLastNameCell.columnIndex],
+    );
+
+    return studyType;
   }
 
   async getStudyFundingTypeFromSheetByStudentsLastName(
@@ -148,7 +179,6 @@ export class GradebookService {
           cell.value?.toString().toLowerCase().trim() === query.toLowerCase();
 
         if (hasValue && isQueryMatched) {
-          console.log(cell.a1Address, cell.value);
           return cell;
         }
       }
@@ -159,6 +189,33 @@ export class GradebookService {
     return null;
   }
 
+  private getStudentStatusByStudentsLastNameCellAddress(
+    sheet: GoogleSpreadsheetWorksheet,
+    targetCellAddress: CellCoords,
+  ) {
+    const [targetCellRow, targetCellCol] = targetCellAddress;
+
+    const studentStatusCell = this.findCellByContent(
+      sheet,
+      STUDENT_STATUS_CELL_LABEL,
+      {
+        initialRow: targetCellRow,
+      },
+    );
+
+    if (!studentStatusCell) {
+      console.warn('Unable to find student status');
+      return null;
+    }
+
+    const studentStatusContentCell = sheet.getCell(
+      studentStatusCell.rowIndex,
+      targetCellCol,
+    );
+
+    return studentStatusContentCell.value;
+  }
+
   private getStudyFundingTypeByStudentsLastNameCellAddress(
     sheet: GoogleSpreadsheetWorksheet,
     targetCellAddress: CellCoords,
@@ -167,8 +224,7 @@ export class GradebookService {
 
     const studyFundingTypeLabelCell = this.findCellByContent(
       sheet,
-      // TODO: move to constant
-      'Форма  фінансування навчання  студентів (бюджет/контракт)',
+      STUDY_FUNDING_TYPE_CELL_LABEL,
       {
         initialRow: targetCellRow,
       },
@@ -256,8 +312,8 @@ export class GradebookService {
     // Фактичні недопуски студентам проставляються напередодні сесії
     // шляхом позначення відповідної клітинки червоним маркером.
     return Boolean(
+      gradeCell.backgroundColorStyle &&
       'rgbColor' in gradeCell.backgroundColorStyle &&
-      'red' in gradeCell.backgroundColorStyle.rgbColor,
       'red' in gradeCell.backgroundColorStyle.rgbColor &&
       gradeCell.backgroundColorStyle.rgbColor.red === 1 &&
       Object.keys(gradeCell.backgroundColorStyle.rgbColor).length === 1,
