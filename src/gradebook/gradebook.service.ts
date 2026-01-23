@@ -13,14 +13,29 @@ import { GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS } from './domain/gradebook.co
 
 @Injectable()
 export class GradebookService {
-  private readonly missingFieldsThreshold = 5;
+  /**
+   * On the 2nd row placed headers with titles describing the main content.
+   * @private
+   */
   private readonly disciplineContentMapActualContentStartRow = 2;
+
+  /**
+   * This value is used to check for discipline missing fields to stop the parsing.
+   * @private
+   */
+  private readonly missingFieldsThreshold = 5;
+
+  /**
+   * All discipline cells columns are hardcoded, assuming that the layout won't change anytime soon.
+   * @private
+   */
   private readonly groupCodeCol = 'A';
   private readonly disciplineNameCol = 'B';
   private readonly academicSemesterCol = 'C';
   private readonly assessmentTypeCol = 'D';
   private readonly responsibleDepartmentCol = 'E';
   private readonly moodleLinkCol = 'F';
+
   private readonly disciplineContentMapColList = [
     this.groupCodeCol,
     this.disciplineNameCol,
