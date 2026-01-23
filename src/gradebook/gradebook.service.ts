@@ -256,9 +256,11 @@ export class GradebookService {
     // Фактичні недопуски студентам проставляються напередодні сесії
     // шляхом позначення відповідної клітинки червоним маркером.
     return Boolean(
-      gradeCell.value &&
       'rgbColor' in gradeCell.backgroundColorStyle &&
       'red' in gradeCell.backgroundColorStyle.rgbColor,
+      'red' in gradeCell.backgroundColorStyle.rgbColor &&
+      gradeCell.backgroundColorStyle.rgbColor.red === 1 &&
+      Object.keys(gradeCell.backgroundColorStyle.rgbColor).length === 1,
     );
   }
 
