@@ -9,6 +9,7 @@ import {
   DisciplineResultMap,
 } from './domain/gradebook.types';
 import { GOOGLE_SHEETS_GRADEBOOK_PROVIDER } from './providers/googleSheetsGradebookProvider';
+import { GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS } from './domain/gradebook.constants';
 
 @Injectable()
 export class GradebookService {
@@ -40,7 +41,7 @@ export class GradebookService {
     );
   }
 
-  async getAllDisciplineGradesByStudentLastName(
+  async getAllDisciplineGradesFromSheetByStudentLastName(
     sheetTitle: string,
     lastName: string,
   ) {
@@ -75,46 +76,39 @@ export class GradebookService {
     return allDisciplineData;
   }
 
-  async findSheetByName(doc: GoogleSpreadsheet, query: string) {
+  private async findSheetByName(doc: GoogleSpreadsheet, query: string) {
     const sheetsByTitle = doc.sheetsByTitle;
-
-    const res = Object.entries(sheetsByTitle).find(([title]) => {
-      if (title.toLowerCase().startsWith(query)) {
-        return true;
-      }
-    });
-
-    if (!res) {
-      return null;
-    }
-
-    const [, sheet] = res;
+    const sheet = sheetsByTitle[query];
 
     await sheet.loadCells();
 
-    console.log('cells loaded = ', sheet.cellStats);
+    console.log(`cells loaded for sheet ${query}: `, sheet.cellStats);
 
     return sheet;
   }
 
-  findA1AddressByContent(sheet: GoogleSpreadsheetWorksheet, query: string) {
+  private findA1AddressByContent(
+    sheet: GoogleSpreadsheetWorksheet,
+    query: string,
+  ) {
     for (let row = 0; row < sheet.rowCount; row++) {
       for (let col = 0; col < sheet.columnCount; col++) {
         const cell = sheet.getCell(row, col);
+        const hasValue = cell.value !== undefined && cell.value !== null;
+        const isQueryMatched =
+          cell.value?.toString().toLowerCase().trim() === query.toLowerCase();
 
-        if (cell.value !== undefined && cell.value !== null) {
-          if (
-            cell.value.toString().toLowerCase().trim() === query.toLowerCase()
-          ) {
-            console.log(cell.a1Address, cell.value);
-            return cell.a1Address;
-          }
+        if (hasValue && isQueryMatched) {
+          console.log(cell.a1Address, cell.value);
+          return cell.a1Address;
         }
       }
     }
+
+    console.warn(`Unable to find Cell by query - ${query}`);
   }
 
-  getAllDisciplineDataByStudentsLastnameA1Address(
+  private getAllDisciplineDataByStudentsLastnameA1Address(
     sheet: GoogleSpreadsheetWorksheet,
     a1Address: string,
     contentMap: DisciplineContentMap[],
@@ -127,12 +121,19 @@ export class GradebookService {
     let currRow = contentStartRowRelativeToTargetCell;
     while (true) {
       const currDisciplineData: DisciplineResultMap = new Map();
-      const currDisciplineGrade = sheet.getCellByA1(
+      const currDisciplineGradeCell = sheet.getCellByA1(
         `${targetCellCol}${currRow}`,
       );
 
-      // TODO: remove hardcoded key
-      currDisciplineData.set('Оцінка', currDisciplineGrade.value?.toString());
+      currDisciplineData.set(
+        GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.GRADE,
+        currDisciplineGradeCell.value?.toString(),
+      );
+      currDisciplineData.set(
+        GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.ACADEMIC_DEBT,
+        this.hasAcademicDebt(currDisciplineGradeCell),
+      );
+
       contentMap.forEach(({ column, label }) => {
         const content = sheet.getCellByA1(`${column}${currRow}`);
         const value = content.value?.toString().trim();
@@ -140,20 +141,12 @@ export class GradebookService {
         currDisciplineData.set(label, value);
       });
 
-      const missingFields = [...currDisciplineData.values()].filter(
-        (value) => !value,
-      );
+      // Iterating through discipline rows until the data is invalid
+      // We assume that we reached the end of all discipline list for current student
+      const isReachedEndOfAllDisciplineData =
+        this.isDisciplineDataInvalid(currDisciplineData);
 
-      if (missingFields.length >= this.missingFieldsThreshold) break;
-
-      allDisciplineDataList.add(currDisciplineData);
-
-      if (this.hasAcademicDebt(currDisciplineGrade)) {
-        // TODO: remove hardcoded key
-        currDisciplineData.set('Студент має академічну заборгованість', true);
-      } else {
-        currDisciplineData.set('Студент має академічну заборгованість', false);
-      }
+      if (isReachedEndOfAllDisciplineData) break;
 
       allDisciplineDataList.add(currDisciplineData);
 
@@ -163,7 +156,7 @@ export class GradebookService {
     return allDisciplineDataList;
   }
 
-  initDisciplineInfoContentMap(
+  private initDisciplineInfoContentMap(
     sheet: GoogleSpreadsheetWorksheet,
   ): DisciplineContentMap[] {
     return this.disciplineContentMapColList.map((column) => {
@@ -178,11 +171,21 @@ export class GradebookService {
     });
   }
 
-  hasAcademicDebt(gradeCell: GoogleSpreadsheetCell) {
-    return (
+  private hasAcademicDebt(gradeCell: GoogleSpreadsheetCell) {
+    // From the document statement:
+    // Фактичні недопуски студентам проставляються напередодні сесії
+    // шляхом позначення відповідної клітинки червоним маркером.
+    return Boolean(
       gradeCell.value &&
       'rgbColor' in gradeCell.backgroundColorStyle &&
-      'red' in gradeCell.backgroundColorStyle.rgbColor
+      'red' in gradeCell.backgroundColorStyle.rgbColor,
     );
+  }
+
+  private isDisciplineDataInvalid(disciplineData: DisciplineResultMap) {
+    const disciplineMissingFields = [...disciplineData.values()].filter(
+      (value) => !value,
+    );
+    return disciplineMissingFields.length >= this.missingFieldsThreshold;
   }
 }
