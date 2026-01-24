@@ -7,7 +7,7 @@ import {
 import {
   CellCoords,
   DisciplineContentMap,
-  DisciplineResultMap,
+  DisciplineResultDictionary,
 } from './domain/gradebook.types';
 import { GOOGLE_SHEETS_GRADEBOOK_PROVIDER } from './providers/googleSheetsGradebookProvider';
 import {
@@ -125,13 +125,13 @@ export class GradebookService {
     );
 
     if (!sheet) {
-      return new Set();
+      return [];
     }
 
     const studentsLastNameCell = this.findCellByContent(sheet, lastName);
 
     if (!studentsLastNameCell) {
-      return new Set();
+      return [];
     }
 
     const disciplineInfoContentMap = this.initDisciplineInfoContentMap(sheet);
@@ -250,30 +250,30 @@ export class GradebookService {
   ) {
     const [targetCellRowIndex, targetCellColIndex] = targetCellCoords;
     const contentStartRowIndexRelativeToTargetCell = targetCellRowIndex + 1;
-    const allDisciplineDataList: Set<DisciplineResultMap> = new Set();
+    const allDisciplineDataList: DisciplineResultDictionary[] = [];
 
     let currRowIndex = contentStartRowIndexRelativeToTargetCell;
     while (true) {
-      const currDisciplineData: DisciplineResultMap = new Map();
       const currDisciplineGradeCell = sheet.getCell(
         currRowIndex,
         targetCellColIndex,
       );
-
-      currDisciplineData.set(
-        GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.GRADE,
-        currDisciplineGradeCell.value?.toString(),
-      );
-      currDisciplineData.set(
-        GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.ACADEMIC_DEBT,
-        this.hasAcademicDebt(currDisciplineGradeCell),
-      );
+      const currDisciplineData: DisciplineResultDictionary = {
+        [GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.GRADE]:
+          currDisciplineGradeCell.value?.toString(),
+        [GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.ACADEMIC_DEBT]:
+          this.hasAcademicDebt(currDisciplineGradeCell),
+      };
 
       contentMap.forEach(({ columnIndex, label }) => {
         const content = sheet.getCell(currRowIndex, columnIndex);
         const value = content.value?.toString().trim();
 
-        currDisciplineData.set(label, value);
+        if (!label) {
+          return;
+        }
+
+        currDisciplineData[label] = value;
       });
 
       // Iterating through discipline rows until the data is invalid
@@ -283,7 +283,7 @@ export class GradebookService {
 
       if (isReachedEndOfAllDisciplineData) break;
 
-      allDisciplineDataList.add(currDisciplineData);
+      allDisciplineDataList.push(currDisciplineData);
 
       currRowIndex++;
     }
@@ -320,8 +320,8 @@ export class GradebookService {
     );
   }
 
-  private isDisciplineDataInvalid(disciplineData: DisciplineResultMap) {
-    const disciplineMissingFields = [...disciplineData.values()].filter(
+  private isDisciplineDataInvalid(disciplineData: DisciplineResultDictionary) {
+    const disciplineMissingFields = Object.values(disciplineData).filter(
       (value) => !value,
     );
 

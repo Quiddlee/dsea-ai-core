@@ -8,8 +8,8 @@ export type DisciplineResult = {
   value: string | boolean | null | undefined;
 };
 
-export type DisciplineResultMap = Map<
-  DisciplineResult['label'],
+export type DisciplineResultDictionary = Record<
+  string,
   DisciplineResult['value']
 >;
 
