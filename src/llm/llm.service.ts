@@ -37,13 +37,15 @@ export class LlmService {
 
   async generate(userData: User, prompt: string, messagesHistory: Message[]) {
     const userDataPrompt = `Данні користувача - повне імʼя = ${userData.fullName} | група = ${userData.group} | роль = ${userData.role}`;
-    const userMessagesHistoryPrompt = messagesHistory.map(
-      (message) =>
-        ({
-          role: messageHistoryRoleDictionary[message.role],
-          content: message.content,
-        }) as const,
-    );
+    const userMessagesHistoryPrompt = messagesHistory
+      .map(
+        (message) =>
+          ({
+            role: messageHistoryRoleDictionary[message.role],
+            content: message.content,
+          }) as const,
+      )
+      .toReversed();
     const vectorStoreId = (await this.getOrCreateVectorStore()).id;
 
     const response = await this.client.responses.create({

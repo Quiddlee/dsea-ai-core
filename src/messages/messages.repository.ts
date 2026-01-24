@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import * as sc from '../schema';
 import { messages, NewMessage } from '../schema';
 import { DRIZZLE_ASYNC_PROVIDER } from '../drizzle/drizzle.provider';
@@ -28,6 +28,9 @@ export class MessagesRepository {
   async getLastMessagesByUserId(id: string, limit = 20) {
     return this.db.query.messages.findMany({
       where: eq(messages.userId, id),
+      orderBy: desc(messages.createdAt),
+      // TODO: revise
+      offset: 1,
       limit,
     });
   }
