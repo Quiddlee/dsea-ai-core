@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Tool } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import { DocumentsService } from './documents.service';
-import { stringifyJSONSafe } from '../common/helpers/json';
 
 const getDocumentByNameSchema = z.object({
   name: z.string(),
@@ -26,28 +25,19 @@ export class DocumentsTool {
     if (!document) {
       return {
         isError: true,
-        content: [
-          {
-            type: 'text',
-            text: 'No document found with the provided name.',
-          },
-        ],
+        message: 'No document found with the provided name.',
       };
     }
 
     return {
-      content: [
-        {
-          type: 'text',
-          text: stringifyJSONSafe({
-            id: document.id,
-            title: document.title,
-            url: document.url,
-            mimeType: document.mimeType,
-            rawPath: document.rawPath,
-          }),
-        },
-      ],
+      isError: false,
+      data: {
+        id: document.id,
+        title: document.title,
+        url: document.url,
+        mimeType: document.mimeType,
+        rawPath: document.rawPath,
+      },
     };
   }
 }
