@@ -22,6 +22,8 @@ import { DocumentsModule } from './documents/documents.module';
 import { DocumentsService } from './documents/documents.service';
 import { DocumentsTool } from './documents/documents.tool';
 import { GradebookModule } from './gradebook/gradebook.module';
+import { GradebookTool } from './gradebook/gradebook.tool';
+import { GradebookService } from './gradebook/gradebook.service';
 
 @Module({
   imports: [
@@ -57,6 +59,8 @@ import { GradebookModule } from './gradebook/gradebook.module';
     DocumentsChunkEmbeddingsRepository,
     DocumentsService,
     DocumentsTool,
+    GradebookService,
+    GradebookTool,
   ],
 })
 export class AppModule {}

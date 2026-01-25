@@ -260,7 +260,7 @@ export class GradebookService {
       );
       const currDisciplineData: DisciplineResultDictionary = {
         [GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.GRADE]:
-          currDisciplineGradeCell.value?.toString(),
+          currDisciplineGradeCell.value?.toString() ?? null,
         [GRADEBOOK_DISCIPLINE_DATA_INTERNAL_FIELDS.ACADEMIC_DEBT]:
           this.hasAcademicDebt(currDisciplineGradeCell),
       };
