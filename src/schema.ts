@@ -37,6 +37,7 @@ export const users = pgTable('users', {
   fullName: text('full_name'),
 
   group: text('group'),
+  faculty: text('faculty'),
 
   role: userRoleEnum('role').notNull().default('student'),
 

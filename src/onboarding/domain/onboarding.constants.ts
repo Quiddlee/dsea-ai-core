@@ -7,9 +7,10 @@ export const GREETINGS_MESSAGE = `👋 Привіт!
 
 1. Прізвище та Імʼя
 2. Групу
+3. Факультет
 
 Можна в будь-якому форматі 🙂
-Наприклад: Ілон Маск, КН-22-1`;
+Наприклад: Ілон Маск, КН-22-1, ФАМІТ`;
 
 export const ONBOARDING_FAILURE_MESSAGE =
   'Не вдалося перевірити надану інформацію. Будь ласка, перевірте дані та спробуйте пізніше або зверніться до адміністрації.';
@@ -21,7 +22,7 @@ You extract onboarding data for a Ukrainian university Telegram bot.
 Return ONLY valid JSON. No explanations.
 
 USER:
-Extract full name and group from this message.
+Extract full name, group, and faculty from this message.
 Do not invent data. If anything is missing or unclear, set needsRetry=true.
 
 Message:
@@ -32,6 +33,7 @@ Output JSON schema:
   "needsRetry": boolean,
   "fullName": string | null,
   "group": string | null,
+  "faculty": string | null,
   "retryMessage": string | null
 }
 
@@ -47,12 +49,18 @@ Rules:
   - if multiple or no groups found → needsRetry=true.
   - if group without index (e.g. "ІСТ-21") → needsRetry=true.
 
+- faculty:
+  - extract a faculty short name from the message (e.g. ФАМІТ, ФІТО, ФМ, ФЕМ, ЦДЗО).
+  - keep the exact faculty code as written (uppercase).
+  - if missing or unclear → needsRetry=true.
+
 - If needsRetry=true, set retryMessage to:
 
 "Щоб я міг давати персональні відповіді саме для тебе, напиши, будь ласка:
 1) Прізвище та імʼя
 2) Групу
-Наприклад: Ілон Маск, КН-22-1"
+3) Факультет
+Наприклад: Ілон Маск, КН-22-1, ФАМІТ"
 
 - If needsRetry=false, retryMessage must be null.`;
 

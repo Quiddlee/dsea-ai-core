@@ -43,6 +43,13 @@
       "when": 1767704949458,
       "tag": "0005_parallel_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769443029335,
+      "tag": "0006_bored_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

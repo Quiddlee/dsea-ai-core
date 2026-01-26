@@ -36,7 +36,7 @@ export class LlmService {
   }
 
   async generate(userData: User, prompt: string, messagesHistory: Message[]) {
-    const userDataPrompt = `Данні користувача - повне імʼя = ${userData.fullName} | група = ${userData.group} | роль = ${userData.role}`;
+    const userDataPrompt = `Данні користувача - повне імʼя = ${userData.fullName} | група = ${userData.group} | роль = ${userData.role} | факультет = ${userData.faculty}`;
     const userMessagesHistoryPrompt = messagesHistory
       .map(
         (message) =>
@@ -49,7 +49,7 @@ export class LlmService {
     const vectorStoreId = (await this.getOrCreateVectorStore()).id;
 
     const response = await this.client.responses.create({
-      model: 'gpt-5-nano',
+      model: 'gpt-5-mini',
       input: [
         {
           role: 'system',
