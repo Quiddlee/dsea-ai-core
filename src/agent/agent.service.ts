@@ -7,6 +7,7 @@ import { ONBOARDING_STATUS } from '../onboarding/domain/onboarding.enums';
 import { MessagesRepository } from '../messages/messages.repository';
 import { GREETINGS_MESSAGE } from '../onboarding/domain/onboarding.constants';
 import { MESSAGE_ROLE } from '../messages/domain/messages.enums';
+import { stringifyJSONSafe } from '../common/helpers/json';
 
 @Injectable()
 export class AgentService {
@@ -48,7 +49,10 @@ export class AgentService {
       role: MESSAGE_ROLE.SYSTEM,
     });
 
-    return GREETINGS_MESSAGE;
+    return stringifyJSONSafe({
+      content: GREETINGS_MESSAGE,
+      filePath: null,
+    });
   }
 
   private async handleAgentReply(userId: string, userMessage: string) {

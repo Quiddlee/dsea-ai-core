@@ -7,7 +7,7 @@ import {
   ONBOARDING_SUCCESS,
 } from './domain/onboarding.constants';
 import { UsersRepository } from '../users/users.repository';
-import { safeParseJSON } from '../common/helpers/json';
+import { safeParseJSON, stringifyJSONSafe } from '../common/helpers/json';
 import { MessagesRepository } from '../messages/messages.repository';
 import { MESSAGE_ROLE } from '../messages/domain/messages.enums';
 import { ONBOARDING_STATUS } from './domain/onboarding.enums';
@@ -51,7 +51,10 @@ export class OnboardingService {
       role: MESSAGE_ROLE.SYSTEM,
     });
 
-    return ONBOARDING_FAILURE_MESSAGE;
+    return stringifyJSONSafe({
+      content: ONBOARDING_FAILURE_MESSAGE,
+      filePath: null,
+    });
   }
 
   private async handleRetry(userId: string, message: string) {
@@ -61,7 +64,10 @@ export class OnboardingService {
       role: MESSAGE_ROLE.SYSTEM,
     });
 
-    return message;
+    return stringifyJSONSafe({
+      content: message,
+      filePath: null,
+    });
   }
 
   private async handleOnboardingSuccess(
@@ -83,6 +89,9 @@ export class OnboardingService {
       }),
     ]);
 
-    return ONBOARDING_SUCCESS;
+    return stringifyJSONSafe({
+      content: ONBOARDING_SUCCESS,
+      filePath: null,
+    });
   }
 }
